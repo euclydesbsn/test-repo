@@ -114,16 +114,209 @@
         .thanks{
           padding-top: 1.2em;
         }
+        /* MOBILE GLOBAL STYLES - DO NOT CHANGE */
+body, .tb_properties{font-family: Arial !important; font-size: 16px !important; color: #808080 !important; line-height: 1 !important; padding: 0px !important; }.buttonstyles{font-family: Arial !important; font-size: 16px !important; color: #FFFFFF !important; padding: 0px !important; }h1{font-family: Arial !important; font-size: 22px !important; color: #202020 !important; line-height: 1 !important; }h2{font-family: Arial !important; font-size: 20px !important; color: #202020 !important; line-height: 1 !important; }h3{font-family: Arial !important; font-size: 18px !important; color: #202020 !important; line-height: 1 !important; }a:not(.buttonstyles){line-height: 1 !important; }.mobile-hidden{display: none !important; }.responsive-td {width: 100% !important; display: block !important; padding: 0 !important;}
+/* END OF MOBILE GLOBAL STYLES - DO NOT CHANGE */
       }
     </style>
   </head>
   <body>
-<div class="wrapper">
+    <!--
+%%[
+    /*Recebe os parametros */
+    SET @bu = RequestParameter('bu')
+    SET @promotion = RequestParameter('p')
+    SET @cod_cli = RequestParameter('cod_cli')
+
+    /*Confere a BU e pega os dados do lead*/
+    IF @bu == 'sx' THEN
+        SET @Lookup = LookupRows('ent.Conta_XP__c_Salesforce','Numero_Conta_XP__c',@cod_cli) 
+        SET @EmailAddress = Field(Row(@Lookup, 1), 'Email_do_cliente__c')
+        SET @SubscriberKey = @EmailAddress
+        SET @Nome = Field(Row(@Lookup, 1), 'Nome_completo_do_Cliente__c')
+        SET @Telefone = Field(Row(@Lookup, 1), 'Celular_Completo_MKT_Cloud__c')
+    ELSEIF @bu == 'sr' THEN 
+        SET @Lookup = LookupRows('ent.Conta_Rico__c_Salesforce','Numero_da_Conta_Rico__c',@cod_cli) 
+        SET @EmailAddress = Field(Row(@Lookup, 1), 'Email_do_Cliente__c')
+        SET @SubscriberKey = @EmailAddress
+        SET @Nome = Field(Row(@Lookup, 1), 'Nome_do_Cliente__c')
+        SET @Telefone = Field(Row(@Lookup, 1), 'Celular_Completo_MKT_Cloud__c')
+    ELSEIF @bu == 'sc' THEN 
+        SET @Lookup = LookupRows('ent.Conta_Clear__c_Salesforce','Numero_da_Conta_Clear__c',@cod_cli) 
+        SET @EmailAddress = Field(Row(@Lookup, 1), 'Email_do_Cliente__c')
+        SET @SubscriberKey = @EmailAddress
+        SET @Nome = Field(Row(@Lookup, 1), 'Nome_do_Cliente__c')
+        SET @Telefone = Field(Row(@Lookup, 1), 'Celular_Mkt_Cloud__c')   
+    ENDIF
+
+    /*Procura qual trigger deve ser usado*/
+    SET @TriggerSendExternalKey = Lookup('Tb_LP_LeadGens_Config','TriggerSendExternalKey','bu',@bu,'Promotion',@promotion)
+    /* Specify the external key of the TriggerSend */
+    SET @TriggerSend = CreateObject("TriggeredSend")
+    SET @TriggerSendDefinition = CreateObject("TriggeredSendDefinition")
+    SetObjectProperty(@TriggerSendDefinition, "CustomerKey", @TriggerSendExternalKey)
+    SetObjectProperty(@TriggerSend, "TriggeredSendDefinition", @TriggerSendDefinition)
+    /* Specify the email address and the subscriber key */
+    SET @TriggerSendSubscriber = CreateObject("Subscriber")
+    SetObjectProperty(@TriggerSendSubscriber, "EmailAddress", @EmailAddress) 
+    SetObjectProperty(@TriggerSendSubscriber, "SubscriberKey", @SubscriberKey) 
+    /* Fill out the Nome field in the TriggerSend data extension */
+    SET @TriggerSendNome = CreateObject("Attribute")
+    SetObjectProperty(@TriggerSendNome, "Name", "Nome")
+    SetObjectProperty(@TriggerSendNome,"Value", @Nome)
+    AddObjectArrayItem(@TriggerSend, "Attributes", @TriggerSendNome)
+    /* Fill out the Telefone field in the TriggerSend data extension */
+    SET @TriggerSendTelefone = CreateObject("Attribute")
+    SetObjectProperty(@TriggerSendTelefone, "Name", "Telefone")
+    SetObjectProperty(@TriggerSendTelefone,"Value", @Telefone)
+    AddObjectArrayItem(@TriggerSend, "Attributes", @TriggerSendTelefone)
+    /* Fill out the CD_CONTA field in the TriggerSend data extension */
+    SET @TriggerSendConta = CreateObject("Attribute")
+    SetObjectProperty(@TriggerSendConta, "Name", "CD_CONTA")
+    SetObjectProperty(@TriggerSendConta,"Value", @cod_cli)
+    AddObjectArrayItem(@TriggerSend, "Attributes", @TriggerSendConta)
+    AddObjectArrayItem(@TriggerSend, "Subscribers", @TriggerSendSubscriber)  
+    SET @TriggerSend_statusCode = InvokeCreate(@TriggerSend, @TriggerSend_statusMsg, @errorCode) 
+    IF @TriggerSend_statusCode != "OK" THEN
+    OUTPUTLINE(CONCAT("Status: ",@TriggerSend_statusMsg," / Code: ",@errorCode))
+    ENDIF
+
+    /* Insere no DE pro qual enviamos o welcome dos analistas */
+    InsertDE('Tb04_Blacklist_NovosLeads_LeadGens','Email',@EmailAddress,'Nome', @nome, 'BU',@bu,'Promotion',@promotion)
+
+    IF @promotion == '5RP01' THEN
+]%%
+-->
+    <div class="wrapper">
+      <p class="branco thanks">
+        Muito obrigada
+        <br />
+        pelo seu 
+        <br /> cadastro!
+      </p>
+      <br />
+      <p class="p-h2">
+        Próximos passos:
+      </p>
+      <p>
+        <br />
+        • Você receberá um e-mail de boas vindas com o e-book que prometi nos próximos minutos. 
+        <br />
+        <br />
+        • Por último e isso é MUITO importante:
+        <br /> 
+        <br />Nossa equipe de analistas tem feito avaliações em tempo real do estresse recente causado pelo coronavírus sobre os mercados no Telegram. Neste momento, os movimentos são rápidos e é importante estarmos em contato direto.
+        <br />
+        <br /> Clique no botão abaixo para entrar nele agora mesmo: 
+        <br />
+        <br />
+        <a class="btn btn-primary" href="https://t.me/joinchat/AAAAAFMtOovjJRiN13vj5A" role="button"><b>Receber atualizações em tempo real no Telegram
+          </b></a>
+      </p>
+      <footer class="brands">
+        <figure>
+          <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/3169fa2f-f94d-4cca-9834-0d6287bb8189.png" alt="Logo da Spiti" />
+        </figure>
+      </footer>
+    </div>
+    <!--
+%%[
+    ELSEIF @promotion == 'TDP01' THEN
+]%%
+-->
+    <div class="wrapper">
       <h1 class="thanks">
-        Até onde isso funciona?
+        Muito obrigado 
+        <br />
+        pelo seu cadastro!
       </h1>
-  <p>
-    Será que o GitHub demora pra atualizar o raw? 17h07 </p>
-    </div> 
+      <footer class="brands">
+        <figure>
+          <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/3169fa2f-f94d-4cca-9834-0d6287bb8189.png" alt="Logo da Spiti" />
+        </figure>
+      </footer>
+    </div>
+    <!--
+%%[
+    ELSEIF @promotion == 'MDC01' THEN
+]%%
+-->
+    <div class="wrapper">
+      <p class="branco thanks">
+        Muito obrigada
+        <br />
+        pelo seu 
+        <br /> cadastro!
+      </p>
+      <br />
+      <p class="p-h2">
+        <a class="btn btn-primary" href="https://t.me/joinchat/AAAAAEyl2y4jptTprg8Q_w" role="button"><b>Receber atualizações em tempo real no Telegram
+          </b></a>
+      </p>
+      <footer class="brands">
+        <figure>
+          <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/3169fa2f-f94d-4cca-9834-0d6287bb8189.png" alt="Logo da Spiti" />
+        </figure>
+      </footer>
+    </div>
+    <!--
+%%[
+    ELSEIF @promotion == 'SPP01' THEN
+]%%
+-->
+    <div class="wrapper">
+      <h1 class="thanks">
+        Muito obrigado 
+        <br />
+        pelo seu cadastro!
+      </h1>
+      <figure class="report-icon">
+        <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/29459f8b-bc03-4639-be29-54e50ca3ac1a.png" alt="icone de figura de relatório"/>
+      </figure>
+      <p class="p-h2">
+        Você receberá seu relatório em 
+        <br />
+        aproximadamente 
+        <span class="bluebg">5 minutos.</span>
+      </p>
+      <br>
+      <a href="https://bit.ly/2KWZDUU" class="btn btn-primary btn-lg" role="button">Se já quiser investir, o caminho é este</a>
+      <footer class="brands">
+        <figure>
+          <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/3169fa2f-f94d-4cca-9834-0d6287bb8189.png" alt="Logo da Spiti" />
+        </figure>
+      </footer>
+    </div>
+    <!--
+%%[
+    ELSE
+]%%
+-->
+    <div class="wrapper">
+      <h1 class="thanks">
+        Muito obrigado 
+        <br />
+        pelo seu cadastro!
+      </h1>
+      <figure class="report-icon">
+        <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/29459f8b-bc03-4639-be29-54e50ca3ac1a.png" alt="icone de figura de relatório"/>
+      </figure>
+      <p>
+        Você receberá seu relatório em 
+        <br />
+        aproximadamente 
+        <span class="bluebg">5 minutos.</span>
+      </p>
+      <footer class="brands">
+        <figure>
+          <img src="http://image.mail.invistaspiti.com.br/lib/fe8f137376640d7b71/m/1/3169fa2f-f94d-4cca-9834-0d6287bb8189.png" alt="Logo da Spiti" />
+        </figure>
+      </footer>
+    </div>
+    <!--
+%%[
+    ENDIF
+]%%    
+-->    
   </body>
 </html>
